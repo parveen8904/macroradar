@@ -389,7 +389,7 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
       <div style={S.header}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={S.dot} />
-          <span style={{ fontWeight: 700, fontSize: 17, color: "#111122", letterSpacing: ".04em", color: "#111122" }}>MACRORADAR.IN</span>
+          <span style={{ fontWeight: 700, fontSize: 17, color: "#111122", letterSpacing: ".04em" }}>MACRORADAR.IN</span>
           <span style={{ fontSize: 12, color: "#7a7c99" }}>Global Capital Flow Intelligence · Live</span>
         </div>
         <span style={{ fontSize: 12, color: "#7a7c99" }}>June 06, 2026</span>
