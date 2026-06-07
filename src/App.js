@@ -15,6 +15,33 @@ function scoreColor(v) {
   return "#d64040";
 }
 
+// ─── THEME PALETTE ───────────────────────────────────────────────────────────
+function makePalette(dark) {
+  return dark
+    ? {
+        bg: "#0b0e13", surface: "#11151c", inset: "#171c25", track: "#222936",
+        scrollTrack: "#11151c", scrollThumb: "#2c333f",
+        border: "#242b38", borderSoft: "#1b212b", rowHi: "#161d28",
+        text: "#dfe3ec", textStrong: "#f4f6fb", textMid: "#aab0c0",
+        textSoft: "#8c93a5", textFaint: "#7a8194", textMuted: "#6a7180", label: "#7f8aa3",
+        green: "#3fb877", red: "#e5575a", amber: "#f0b429", blue: "#8fb4ec", oil: "#e88a55",
+        tintG: "#0e2419", tintR: "#2a1213", tintA: "#272006", tintN: "#1a212c",
+        chipBlueBg: "#16263f", chipBlue: "#8fb4ec",
+        warnText: "#f0c869", topBadgeText: "#04130a", inputAccent: "#3fb877",
+      }
+    : {
+        bg: "#f5f6f8", surface: "#ffffff", inset: "#f5f6f8", track: "#eef0f4",
+        scrollTrack: "#f0f2f6", scrollThumb: "#c8ccd8",
+        border: "#dde1ea", borderSoft: "#e7e9f0", rowHi: "#f0f4ff",
+        text: "#1f2030", textStrong: "#111122", textMid: "#555577",
+        textSoft: "#7a7c99", textFaint: "#8a8caa", textMuted: "#9aa0b0", label: "#8a90a0",
+        green: "#2a9d5c", red: "#d64040", amber: "#e9a825", blue: "#4466aa", oil: "#e87040",
+        tintG: "#e8f6ee", tintR: "#fdecea", tintA: "#fff8e6", tintN: "#eef0f4",
+        chipBlueBg: "#e8f0ff", chipBlue: "#4466aa",
+        warnText: "#92400e", topBadgeText: "#001a0a", inputAccent: "#2a9d5c",
+      };
+}
+
 function classifyImpact(title) {
   const t = title.toLowerCase();
   let eq = 0, bonds = 0, gold = 0, realty = 0, dollar = 0;
@@ -183,6 +210,21 @@ export default function App() {
     { id: 3, label: "VIX > 25", active: true, triggered: false },
   ]);
 
+  // Theme (dark mode) — persisted, defaults to system preference
+  const [dark, setDark] = useState(() => {
+    try {
+      const saved = localStorage.getItem("mr-theme");
+      if (saved === "dark") return true;
+      if (saved === "light") return false;
+      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    } catch { return false; }
+  });
+  const c = makePalette(dark);
+  useEffect(() => {
+    try { localStorage.setItem("mr-theme", dark ? "dark" : "light"); } catch {}
+    document.body.style.background = c.bg;
+  }, [dark, c.bg]);
+
   // Playbook state
   const [playbookEvent, setPlaybookEvent] = useState(null);
   const [playbookResult, setPlaybookResult] = useState(null);
@@ -307,8 +349,8 @@ export default function App() {
     setPlaybookResult(null);
     setPlaybookLoading(true);
 
-    const macroSnapshot = Object.entries(MACRO).map(([c, m]) =>
-      `${c}: CPI ${m.inflation}%, Rate ${m.rate}%, Real Yield ${m.real_yield > 0 ? "+" : ""}${m.real_yield}%, GDP ${m.gdp}%`
+    const macroSnapshot = Object.entries(MACRO).map(([co, m]) =>
+      `${co}: CPI ${m.inflation}%, Rate ${m.rate}%, Real Yield ${m.real_yield > 0 ? "+" : ""}${m.real_yield}%, GDP ${m.gdp}%`
     ).join(" | ");
 
     const currentScores = Object.entries(scores).map(([k, v]) => `${ASSET_LABELS[k]}: ${Math.round(v)}/100`).join(", ");
@@ -364,17 +406,17 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
   const fmt = (v, d = 2) => v ? Number(v).toFixed(d) : "—";
 
   const S = {
-    page:    { background: "#f5f6f8", minHeight: "100vh", color: "#1a1a2e", fontFamily: "system-ui, sans-serif", fontSize: 15 },
-    header:  { background: "#ffffff", borderBottom: "1px solid #dde1ea", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" },
-    ticker:  { background: "#ffffff", borderBottom: "1px solid #dde1ea", padding: "8px 20px", display: "flex", gap: 24, overflowX: "auto", whiteSpace: "nowrap", alignItems: "center" },
+    page:    { background: c.bg, minHeight: "100vh", color: c.text, fontFamily: "system-ui, sans-serif", fontSize: 15, transition: "background .2s, color .2s" },
+    header:  { background: c.surface, borderBottom: `1px solid ${c.border}`, padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50, boxShadow: dark ? "0 1px 4px rgba(0,0,0,0.4)" : "0 1px 4px rgba(0,0,0,0.06)" },
+    ticker:  { background: c.surface, borderBottom: `1px solid ${c.border}`, padding: "8px 20px", display: "flex", gap: 24, overflowX: "auto", whiteSpace: "nowrap", alignItems: "center" },
     grid:    { display: "grid", gridTemplateColumns: "320px 1fr 280px", minHeight: "calc(100vh - 84px)" },
-    left:    { borderRight: "1px solid #dde1ea", display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 84px)", overflow: "hidden", background: "#ffffff" },
+    left:    { borderRight: `1px solid ${c.border}`, display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 84px)", overflow: "hidden", background: c.surface },
     center:  { padding: "16px 20px", overflowY: "auto", maxHeight: "calc(100vh - 84px)" },
-    right:   { borderLeft: "1px solid #dde1ea", padding: "16px 14px", overflowY: "auto", maxHeight: "calc(100vh - 84px)", background: "#ffffff" },
-    card:    { background: "#ffffff", border: "1px solid #dde1ea", borderRadius: 10, padding: "14px 16px", marginBottom: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" },
-    label:   { fontSize: 17, color: "#8a90a0", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 8 },
-    dot:     { width: 8, height: 8, borderRadius: "50%", background: "#2a9d5c", animation: "pulse 2s infinite" },
-    blink:   { width: 6, height: 6, borderRadius: "50%", background: "#2a9d5c", animation: "blink 1.5s infinite" },
+    right:   { borderLeft: `1px solid ${c.border}`, padding: "16px 14px", overflowY: "auto", maxHeight: "calc(100vh - 84px)", background: c.surface },
+    card:    { background: c.surface, border: `1px solid ${c.border}`, borderRadius: 10, padding: "14px 16px", marginBottom: 10, boxShadow: dark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 3px rgba(0,0,0,0.04)" },
+    label:   { fontSize: 17, color: c.label, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 8 },
+    dot:     { width: 8, height: 8, borderRadius: "50%", background: c.green, animation: "pulse 2s infinite" },
+    blink:   { width: 6, height: 6, borderRadius: "50%", background: c.green, animation: "blink 1.5s infinite" },
   };
 
   return (
@@ -385,40 +427,57 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
         @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin { to{transform:rotate(360deg)} }
         a { color: inherit; text-decoration: none; }
-        a:hover { color: #111122; }
-        input[type=range] { accent-color: #2a9d5c; }
+        a:hover { color: ${c.textStrong}; }
+        input[type=range] { accent-color: ${c.inputAccent}; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: #f0f2f6; }
-        ::-webkit-scrollbar-thumb { background: #c8ccd8; border-radius: 2px; }
-        .pb-event-btn:hover { border-color: #2a9d5c !important; color: #111122 !important; background: #eafaf2 !important; }
-        .pb-event-btn.active { border-color: #2a9d5c !important; background: #eafaf2 !important; }
+        ::-webkit-scrollbar-track { background: ${c.scrollTrack}; }
+        ::-webkit-scrollbar-thumb { background: ${c.scrollThumb}; border-radius: 2px; }
+        .pb-event-btn:hover { border-color: ${c.green} !important; color: ${c.textStrong} !important; background: ${c.tintG} !important; }
+        .pb-event-btn.active { border-color: ${c.green} !important; background: ${c.tintG} !important; }
+        .theme-toggle:hover { border-color: ${c.green} !important; }
       `}</style>
 
       {/* HEADER */}
       <div style={S.header}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={S.dot} />
-          <span style={{ fontWeight: 700, fontSize: 17, color: "#111122", letterSpacing: ".04em" }}>MACRORADAR.IN</span>
-          <span style={{ fontSize: 12, color: "#7a7c99" }}>Global Capital Flow Intelligence · Live</span>
+          <span style={{ fontWeight: 700, fontSize: 17, color: c.textStrong, letterSpacing: ".04em" }}>MACRORADAR.IN</span>
+          <span style={{ fontSize: 12, color: c.textSoft }}>Global Capital Flow Intelligence · Live</span>
         </div>
-        <UserMenu onLoginClick={() => setShowLogin(true)} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            className="theme-toggle"
+            onClick={() => setDark(d => !d)}
+            title={dark ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 36, height: 32, background: "none",
+              border: `1px solid ${c.border}`, borderRadius: 7, cursor: "pointer",
+              fontSize: 16, lineHeight: 1, color: c.text, transition: "border-color .15s",
+            }}
+          >
+            {dark ? "☀️" : "🌙"}
+          </button>
+          <UserMenu onLoginClick={() => setShowLogin(true)} theme={c} />
+        </div>
       </div>
 
       {/* TICKER */}
       <div style={S.ticker}>
         {[["GLD", prices.gold, "$", 2], ["BTC", prices.btc, "$", 0], ["INR/USD", prices.inrusd, "₹", 2], ["JPY/USD", prices.jpyusd, "¥", 1]].map(([l, v, s, d]) => (
           <span key={l} style={{ fontSize: 11 }}>
-            <span style={{ color: "#7a7c99" }}>{l} </span>
-            <span style={{ color: v ? "#e6e6e8" : "#3a4050", fontWeight: 600 }}>{v ? s + fmt(v, d) : "loading..."}</span>
+            <span style={{ color: c.textSoft }}>{l} </span>
+            <span style={{ color: v ? c.text : c.textFaint, fontWeight: 600 }}>{v ? s + fmt(v, d) : "loading..."}</span>
           </span>
         ))}
         {[["Oil", "$84.2"], ["VIX", "18.4"], ["DXY", "104.2"], ["US10Y", "4.42%"]].map(([l, v]) => (
           <span key={l} style={{ fontSize: 11 }}>
-            <span style={{ color: "#7a7c99" }}>{l} </span>
-            <span style={{ color: "#111122", fontWeight: 600 }}>{v}</span>
+            <span style={{ color: c.textSoft }}>{l} </span>
+            <span style={{ color: c.textStrong, fontWeight: 600 }}>{v}</span>
           </span>
         ))}
-        <span style={{ marginLeft: "auto", fontSize: 11, color: "#7a7c99" }}>{priceStatus}</span>
+        <span style={{ marginLeft: "auto", fontSize: 11, color: c.textSoft }}>{priceStatus}</span>
       </div>
 
       {/* 3-COLUMN LAYOUT */}
@@ -426,18 +485,18 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
 
         {/* LEFT — NEWS */}
         <div style={S.left}>
-          <div style={{ padding: "8px 12px", borderBottom: "1px solid #1c2028" }}>
+          <div style={{ padding: "8px 12px", borderBottom: `1px solid ${c.border}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={S.label}>Live News Feeds</span>
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                 <div style={S.blink} />
-                <span style={{ fontSize: 11, color: "#7a7c99" }}>{newsStatus}</span>
+                <span style={{ fontSize: 11, color: c.textSoft }}>{newsStatus}</span>
               </div>
             </div>
           </div>
           <div style={{ overflowY: "auto", flex: 1 }}>
             {news.length === 0 && (
-              <div style={{ padding: 20, color: "#7a7c99", fontSize: 17, textAlign: "center" }}>
+              <div style={{ padding: 20, color: c.textSoft, fontSize: 17, textAlign: "center" }}>
                 Loading news feeds...<br />Takes up to 30 seconds.
               </div>
             )}
@@ -446,34 +505,34 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
               const bull = n.sentiment === "RISK-ON";
               const bear = n.sentiment === "RISK-OFF";
               return (
-                <div key={n.id + i} style={{ borderBottom: "1px solid #121518", padding: "8px 12px", background: i === 0 ? "#10141a" : "transparent" }}>
+                <div key={n.id + i} style={{ borderBottom: `1px solid ${c.borderSoft}`, padding: "8px 12px", background: i === 0 ? c.rowHi : "transparent" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                     <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                       <span>{n.flag}</span>
-                      <span style={{ fontSize: 11, color: "#4466aa", background: "#e8f0ff", padding: "1px 5px", borderRadius: 3 }}>{n.source}</span>
-                      <span style={{ fontSize: 11, color: "#8a8caa" }}>{timeAgo(n.pubDate)}</span>
+                      <span style={{ fontSize: 11, color: c.chipBlue, background: c.chipBlueBg, padding: "1px 5px", borderRadius: 3 }}>{n.source}</span>
+                      <span style={{ fontSize: 11, color: c.textFaint }}>{timeAgo(n.pubDate)}</span>
                     </div>
-                    <span style={{ fontSize: 11, padding: "1px 5px", borderRadius: 3, background: bull ? "#0a1a10" : bear ? "#1a0808" : "#121518", color: bull ? "#2a9d5c" : bear ? "#d64040" : "#3a4050", fontWeight: 700 }}>
+                    <span style={{ fontSize: 11, padding: "1px 5px", borderRadius: 3, background: bull ? c.tintG : bear ? c.tintR : c.tintN, color: bull ? c.green : bear ? c.red : c.textMuted, fontWeight: 700 }}>
                       {n.sentiment}
                     </span>
                   </div>
-                  <a href={n.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 17, color: "#2a2a3e", lineHeight: 1.45, display: "block", marginBottom: 5 }}>
+                  <a href={n.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 17, color: c.text, lineHeight: 1.45, display: "block", marginBottom: 5 }}>
                     {n.title}
                   </a>
                   <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginBottom: 5 }}>
                     {[["EQ", n.eq], ["BD", n.bonds], ["AU", n.gold], ["RE", n.realty], ["$", n.dollar]].map(([lbl, val]) =>
                       val !== 0 ? (
-                        <span key={lbl} style={{ fontSize: 11, padding: "1px 4px", borderRadius: 2, background: val > 0 ? "#091408" : "#160606", color: val > 0 ? "#2a9d5c" : "#d64040" }}>
+                        <span key={lbl} style={{ fontSize: 11, padding: "1px 4px", borderRadius: 2, background: val > 0 ? c.tintG : c.tintR, color: val > 0 ? c.green : c.red }}>
                           {lbl} {val > 0 ? "+" : ""}{val}
                         </span>
                       ) : null
                     )}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 11, color: "#8a8caa", minWidth: 55 }}>Your weight</span>
+                    <span style={{ fontSize: 11, color: c.textFaint, minWidth: 55 }}>Your weight</span>
                     <input type="range" min={0} max={10} value={uw} onChange={e => setUserWeights(p => ({ ...p, [n.id]: parseInt(e.target.value) }))} style={{ flex: 1, height: 2 }} />
-                    <span style={{ fontSize: 12, color: "#2a9d5c", fontWeight: 700, minWidth: 12 }}>{uw}</span>
-                    <span style={{ fontSize: 11, color: "#8a8caa" }}>AI:{n.aiWeight}</span>
+                    <span style={{ fontSize: 12, color: c.green, fontWeight: 700, minWidth: 12 }}>{uw}</span>
+                    <span style={{ fontSize: 11, color: c.textFaint }}>AI:{n.aiWeight}</span>
                   </div>
                 </div>
               );
@@ -484,9 +543,9 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
         {/* CENTER */}
         <div style={S.center}>
           {/* Tabs */}
-          <div style={{ display: "flex", borderBottom: "1px solid #1c2028", marginBottom: 12 }}>
+          <div style={{ display: "flex", borderBottom: `1px solid ${c.border}`, marginBottom: 12 }}>
             {[["news", "Overview"], ["playbook", "⚡ Playbook"], ["yield", "Real Yield"], ["alerts", "⚑ Alerts"], ["flows", "Flow Map"]].map(([id, lbl]) => (
-              <button key={id} onClick={() => setTab(id)} style={{ padding: "5px 14px", fontSize: 17, background: "transparent", border: "none", borderBottom: tab === id ? "2px solid #2a9d5c" : "2px solid transparent", color: tab === id ? "#e6e6e8" : "#3a4050", cursor: "pointer", fontWeight: tab === id ? 700 : 400 }}>
+              <button key={id} onClick={() => setTab(id)} style={{ padding: "5px 14px", fontSize: 17, background: "transparent", border: "none", borderBottom: tab === id ? `2px solid ${c.green}` : "2px solid transparent", color: tab === id ? c.textStrong : c.textMuted, cursor: "pointer", fontWeight: tab === id ? 700 : 400 }}>
                 {lbl}
               </button>
             ))}
@@ -496,13 +555,13 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
           {tab === "playbook" && (
             <div>
               {/* Header */}
-              <div style={{ ...S.card, border: "1px solid #1a2a3a", marginBottom: 12 }}>
+              <div style={{ ...S.card, marginBottom: 12 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                   <span style={{ fontSize: 22 }}>⚡</span>
                   <div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: "#111122", marginBottom: 3 }}>Macro Playbook — AI Event Intelligence</div>
-                    <div style={{ fontSize: 17, color: "#555577", lineHeight: 1.6 }}>
-                      Select a macro event below. Claude reads the <strong style={{ color: "#1a1a2e" }}>current macro snapshot</strong> (rates, CPI, GDP, real yields) and tells you exactly how each asset class will react — with India-specific impact and contrarian view.
+                    <div style={{ fontSize: 17, fontWeight: 700, color: c.textStrong, marginBottom: 3 }}>Macro Playbook — AI Event Intelligence</div>
+                    <div style={{ fontSize: 17, color: c.textMid, lineHeight: 1.6 }}>
+                      Select a macro event below. Claude reads the <strong style={{ color: c.text }}>current macro snapshot</strong> (rates, CPI, GDP, real yields) and tells you exactly how each asset class will react — with India-specific impact and contrarian view.
                     </div>
                   </div>
                 </div>
@@ -510,13 +569,13 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
 
               {/* Pro gate banner */}
               {!isPro && (
-                <div style={{ ...S.card, border: "1px solid #e9a825", background: "#fffbeb", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ fontSize: 13, color: "#92400e" }}>
+                <div style={{ ...S.card, border: `1px solid ${c.amber}`, background: c.tintA, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ fontSize: 13, color: c.warnText }}>
                     🔒 <strong>Pro feature.</strong> Subscribe to fire events and get AI analysis.
                   </div>
                   <button
                     onClick={() => user ? setShowSubscribe(true) : setShowLogin(true)}
-                    style={{ padding: "5px 14px", background: "#2a9d5c", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                    style={{ padding: "5px 14px", background: c.green, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
                   >
                     {user ? "Upgrade — $100/mo" : "Log in to subscribe"}
                   </button>
@@ -533,8 +592,8 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
                     onClick={() => runPlaybook(ev)}
                     disabled={playbookLoading}
                     style={{
-                      background: playbookEvent?.id === ev.id ? "#091a10" : "#0e1117",
-                      border: `1px solid ${playbookEvent?.id === ev.id ? "#2a9d5c" : "#1c2028"}`,
+                      background: playbookEvent?.id === ev.id ? c.tintG : c.surface,
+                      border: `1px solid ${playbookEvent?.id === ev.id ? c.green : c.border}`,
                       borderRadius: 7,
                       padding: "8px 10px",
                       textAlign: "left",
@@ -545,19 +604,19 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                       <span style={{ fontSize: 16 }}>{ev.icon}</span>
-                      <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 3, background: "#f5f6f8", color: ev.color, fontWeight: 700 }}>{ev.category}</span>
+                      <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 3, background: c.inset, color: ev.color, fontWeight: 700 }}>{ev.category}</span>
                     </div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1a2e", marginBottom: 2, lineHeight: 1.3 }}>{ev.label}</div>
-                    <div style={{ fontSize: 11, color: "#7a7c99", lineHeight: 1.3 }}>{ev.desc}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: c.text, marginBottom: 2, lineHeight: 1.3 }}>{ev.label}</div>
+                    <div style={{ fontSize: 11, color: c.textSoft, lineHeight: 1.3 }}>{ev.desc}</div>
                   </button>
                 ))}
               </div>
 
               {/* Loading */}
               {playbookLoading && (
-                <div style={{ ...S.card, border: "1px solid #1a2a1a", textAlign: "center", padding: "28px 12px" }}>
-                  <div style={{ width: 20, height: 20, border: "2px solid #1c2028", borderTopColor: "#2a9d5c", borderRadius: "50%", animation: "spin 0.7s linear infinite", margin: "0 auto 10px" }} />
-                  <div style={{ fontSize: 17, color: "#555577" }}>Claude is reading the current macro environment and reasoning through market impacts...</div>
+                <div style={{ ...S.card, textAlign: "center", padding: "28px 12px" }}>
+                  <div style={{ width: 20, height: 20, border: `2px solid ${c.border}`, borderTopColor: c.green, borderRadius: "50%", animation: "spin 0.7s linear infinite", margin: "0 auto 10px" }} />
+                  <div style={{ fontSize: 17, color: c.textMid }}>Claude is reading the current macro environment and reasoning through market impacts...</div>
                 </div>
               )}
 
@@ -565,19 +624,19 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
               {playbookResult && !playbookLoading && !playbookResult.error && (
                 <div style={{ animation: "fadeIn .3s ease" }}>
                   {/* Headline */}
-                  <div style={{ ...S.card, border: `1px solid ${playbookResult.regime === "RISK-ON" ? "#2a9d5c" : playbookResult.regime === "RISK-OFF" ? "#d64040" : "#e9a825"}`, marginBottom: 8 }}>
+                  <div style={{ ...S.card, border: `1px solid ${playbookResult.regime === "RISK-ON" ? c.green : playbookResult.regime === "RISK-OFF" ? c.red : c.amber}`, marginBottom: 8 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div>
-                        <div style={{ fontSize: 11, color: "#7a7c99", marginBottom: 4 }}>AI MACRO VERDICT · {playbookEvent?.label?.toUpperCase()}</div>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: "#111122", lineHeight: 1.3 }}>{playbookResult.headline}</div>
+                        <div style={{ fontSize: 11, color: c.textSoft, marginBottom: 4 }}>AI MACRO VERDICT · {playbookEvent?.label?.toUpperCase()}</div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: c.textStrong, lineHeight: 1.3 }}>{playbookResult.headline}</div>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
                         <span style={{
                           fontSize: 12, fontWeight: 700, padding: "3px 8px", borderRadius: 4,
-                          background: playbookResult.regime === "RISK-ON" ? "#091408" : playbookResult.regime === "RISK-OFF" ? "#160606" : "#1a1200",
-                          color: playbookResult.regime === "RISK-ON" ? "#2a9d5c" : playbookResult.regime === "RISK-OFF" ? "#d64040" : "#e9a825"
+                          background: playbookResult.regime === "RISK-ON" ? c.tintG : playbookResult.regime === "RISK-OFF" ? c.tintR : c.tintA,
+                          color: playbookResult.regime === "RISK-ON" ? c.green : playbookResult.regime === "RISK-OFF" ? c.red : c.amber
                         }}>{playbookResult.regime}</span>
-                        <span style={{ fontSize: 11, color: "#8a8caa" }}>{playbookResult.timeframe}</span>
+                        <span style={{ fontSize: 11, color: c.textFaint }}>{playbookResult.timeframe}</span>
                       </div>
                     </div>
                   </div>
@@ -591,40 +650,40 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
                           <span style={{ fontSize: 14 }}>{a.icon}</span>
                           <span style={{
                             fontSize: 11, fontWeight: 700, padding: "1px 5px", borderRadius: 3,
-                            background: a.direction === "UP" ? "#091408" : a.direction === "DOWN" ? "#160606" : "#121518",
-                            color: a.direction === "UP" ? "#2a9d5c" : a.direction === "DOWN" ? "#d64040" : "#3a4050"
+                            background: a.direction === "UP" ? c.tintG : a.direction === "DOWN" ? c.tintR : c.tintN,
+                            color: a.direction === "UP" ? c.green : a.direction === "DOWN" ? c.red : c.textMuted
                           }}>
                             {a.direction === "UP" ? "▲" : a.direction === "DOWN" ? "▼" : "—"} {a.magnitude}
                           </span>
                         </div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "#1a1a2e", marginBottom: 3 }}>{a.name}</div>
-                        <div style={{ fontSize: 11, color: "#7a7c99", lineHeight: 1.4 }}>{a.reason}</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: c.text, marginBottom: 3 }}>{a.name}</div>
+                        <div style={{ fontSize: 11, color: c.textSoft, lineHeight: 1.4 }}>{a.reason}</div>
                       </div>
                     ))}
                   </div>
 
                   {/* India Impact */}
-                  <div style={{ ...S.card, border: "1px solid #1a2a1a", marginBottom: 8 }}>
+                  <div style={{ ...S.card, marginBottom: 8 }}>
                     <div style={S.label}>🇮🇳 India-specific impact</div>
-                    <div style={{ fontSize: 17, color: "#2a2a3e", lineHeight: 1.7 }}>{playbookResult.india_impact}</div>
+                    <div style={{ fontSize: 17, color: c.text, lineHeight: 1.7 }}>{playbookResult.india_impact}</div>
                   </div>
 
                   {/* Watch + Contrarian */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <div style={{ ...S.card, marginBottom: 0, border: "1px solid #1a2028" }}>
+                    <div style={{ ...S.card, marginBottom: 0 }}>
                       <div style={S.label}>👁 Watch next 48h</div>
-                      <div style={{ fontSize: 17, color: "#e9a825", lineHeight: 1.5 }}>{playbookResult.watch_next}</div>
+                      <div style={{ fontSize: 17, color: c.amber, lineHeight: 1.5 }}>{playbookResult.watch_next}</div>
                     </div>
-                    <div style={{ ...S.card, marginBottom: 0, border: "1px solid #1a1a2a" }}>
+                    <div style={{ ...S.card, marginBottom: 0 }}>
                       <div style={S.label}>🔄 Contrarian take</div>
-                      <div style={{ fontSize: 17, color: "#2a2a3e", lineHeight: 1.5 }}>{playbookResult.contrarian}</div>
+                      <div style={{ fontSize: 17, color: c.text, lineHeight: 1.5 }}>{playbookResult.contrarian}</div>
                     </div>
                   </div>
                 </div>
               )}
 
               {playbookResult?.error && (
-                <div style={{ ...S.card, color: "#d64040", fontSize: 11 }}>{playbookResult.error}</div>
+                <div style={{ ...S.card, color: c.red, fontSize: 11 }}>{playbookResult.error}</div>
               )}
 
               {/* History */}
@@ -637,14 +696,14 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <span style={{ fontSize: 14 }}>{h.event.icon}</span>
                         <div>
-                          <div style={{ fontSize: 12, color: "#1a1a2e" }}>{h.event.label}</div>
-                          <div style={{ fontSize: 11, color: "#8a8caa" }}>{h.time}</div>
+                          <div style={{ fontSize: 12, color: c.text }}>{h.event.label}</div>
+                          <div style={{ fontSize: 11, color: c.textFaint }}>{h.time}</div>
                         </div>
                       </div>
                       <span style={{
                         fontSize: 11, padding: "1px 6px", borderRadius: 3, fontWeight: 700,
-                        background: h.result.regime === "RISK-ON" ? "#091408" : h.result.regime === "RISK-OFF" ? "#160606" : "#1a1200",
-                        color: h.result.regime === "RISK-ON" ? "#2a9d5c" : h.result.regime === "RISK-OFF" ? "#d64040" : "#e9a825"
+                        background: h.result.regime === "RISK-ON" ? c.tintG : h.result.regime === "RISK-OFF" ? c.tintR : c.tintA,
+                        color: h.result.regime === "RISK-ON" ? c.green : h.result.regime === "RISK-OFF" ? c.red : c.amber
                       }}>{h.result.regime}</span>
                     </div>
                   ))}
@@ -657,9 +716,9 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
             <>
               {/* Country Tabs */}
               <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                {Object.keys(MACRO).map(c => (
-                  <button key={c} onClick={() => setCountry(c)} style={{ padding: "3px 10px", borderRadius: 5, border: "1px solid", borderColor: country === c ? "#2a9d5c" : "#1c2028", background: country === c ? "#091a10" : "#0e1117", color: country === c ? "#2a9d5c" : "#3a4050", fontSize: 17, cursor: "pointer" }}>
-                    {FLAGS[c]} {c}
+                {Object.keys(MACRO).map(co => (
+                  <button key={co} onClick={() => setCountry(co)} style={{ padding: "3px 10px", borderRadius: 5, border: "1px solid", borderColor: country === co ? c.green : c.border, background: country === co ? c.tintG : c.surface, color: country === co ? c.green : c.textMuted, fontSize: 17, cursor: "pointer" }}>
+                    {FLAGS[co]} {co}
                   </button>
                 ))}
               </div>
@@ -669,23 +728,23 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
                 <div style={S.label}>{FLAGS[country]} {country} · Macro Variables</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
                   {[
-                    ["CPI", mv.inflation + "%", mv.inflation > 5 ? "#d64040" : mv.inflation < 2 ? "#4a8cd4" : "#e9a825"],
-                    ["Policy Rate", mv.rate + "%", "#c8c8ca"],
-                    ["Real Yield", (mv.real_yield > 0 ? "+" : "") + mv.real_yield.toFixed(2) + "%", mv.real_yield < 0 ? "#d64040" : mv.real_yield > 2 ? "#2a9d5c" : "#e9a825"],
-                    ["GDP", mv.gdp + "%", mv.gdp > 5 ? "#2a9d5c" : mv.gdp > 2 ? "#e9a825" : "#d64040"],
-                    ["Extra", mv.extra, "#c8c8ca"],
-                    ["Oil", "$84.2", "#e87040"],
-                    ["Net Flow", country === "US" ? "Receiving" : country === "JP" ? "Sending" : "Mixed", country === "US" ? "#2a9d5c" : "#e9a825"],
-                    ["Trend", country === "US" ? "Bullish" : country === "IN" ? "Cautious" : "Neutral", country === "US" ? "#2a9d5c" : "#e9a825"],
+                    ["CPI", mv.inflation + "%", mv.inflation > 5 ? c.red : mv.inflation < 2 ? c.blue : c.amber],
+                    ["Policy Rate", mv.rate + "%", c.text],
+                    ["Real Yield", (mv.real_yield > 0 ? "+" : "") + mv.real_yield.toFixed(2) + "%", mv.real_yield < 0 ? c.red : mv.real_yield > 2 ? c.green : c.amber],
+                    ["GDP", mv.gdp + "%", mv.gdp > 5 ? c.green : mv.gdp > 2 ? c.amber : c.red],
+                    ["Extra", mv.extra, c.text],
+                    ["Oil", "$84.2", c.oil],
+                    ["Net Flow", country === "US" ? "Receiving" : country === "JP" ? "Sending" : "Mixed", country === "US" ? c.green : c.amber],
+                    ["Trend", country === "US" ? "Bullish" : country === "IN" ? "Cautious" : "Neutral", country === "US" ? c.green : c.amber],
                   ].map(([lbl, val, col]) => (
-                    <div key={lbl} style={{ background: "#f5f6f8", borderRadius: 5, padding: "7px 8px" }}>
-                      <div style={{ fontSize: 11, color: "#8a8caa", marginBottom: 2 }}>{lbl}</div>
+                    <div key={lbl} style={{ background: c.inset, borderRadius: 5, padding: "7px 8px" }}>
+                      <div style={{ fontSize: 11, color: c.textFaint, marginBottom: 2 }}>{lbl}</div>
                       <div style={{ fontSize: 16, fontWeight: 700, color: col }}>{val}</div>
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: 8, padding: "6px 8px", background: "#f5f6f8", borderRadius: 5, fontSize: 17, color: "#555577", lineHeight: 1.6 }}>
-                  <strong style={{ color: "#1a1a2e" }}>Real Yield</strong> = {mv.rate}% − {mv.inflation}% = <strong style={{ color: mv.real_yield < 0 ? "#d64040" : mv.real_yield > 2 ? "#2a9d5c" : "#e9a825" }}>{(mv.real_yield > 0 ? "+" : "") + mv.real_yield.toFixed(2)}%</strong>
+                <div style={{ marginTop: 8, padding: "6px 8px", background: c.inset, borderRadius: 5, fontSize: 17, color: c.textMid, lineHeight: 1.6 }}>
+                  <strong style={{ color: c.text }}>Real Yield</strong> = {mv.rate}% − {mv.inflation}% = <strong style={{ color: mv.real_yield < 0 ? c.red : mv.real_yield > 2 ? c.green : c.amber }}>{(mv.real_yield > 0 ? "+" : "") + mv.real_yield.toFixed(2)}%</strong>
                   <span style={{ marginLeft: 8 }}>{mv.real_yield < 0 ? "→ Negative: money flees to gold/equities" : mv.real_yield > 2 ? "→ High: bonds attractive" : "→ Mild: balanced"}</span>
                 </div>
               </div>
@@ -699,15 +758,15 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
                   const col = scoreColor(sc);
                   const lbl = sc >= 65 ? "BULLISH" : sc >= 48 ? "NEUTRAL" : "BEARISH";
                   return (
-                    <div key={asset} style={{ ...S.card, marginBottom: 0, border: `1px solid ${isTop ? "#2a9d5c" : "#1c2028"}`, position: "relative" }}>
-                      {isTop && <div style={{ position: "absolute", top: -1, right: 6, fontSize: 10, background: "#2a9d5c", color: "#001a0a", padding: "1px 5px", borderRadius: "0 0 4px 4px", fontWeight: 700 }}>TOP</div>}
+                    <div key={asset} style={{ ...S.card, marginBottom: 0, border: `1px solid ${isTop ? c.green : c.border}`, position: "relative" }}>
+                      {isTop && <div style={{ position: "absolute", top: -1, right: 6, fontSize: 10, background: c.green, color: c.topBadgeText, padding: "1px 5px", borderRadius: "0 0 4px 4px", fontWeight: 700 }}>TOP</div>}
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <span style={{ fontSize: 16 }}>{ASSET_ICONS[asset]}</span>
                         <span style={{ fontSize: 11, padding: "2px 5px", borderRadius: 3, color: col, fontWeight: 700 }}>{lbl}</span>
                       </div>
-                      <div style={{ fontSize: 12, color: "#555577", marginBottom: 2 }}>{ASSET_LABELS[asset]}</div>
+                      <div style={{ fontSize: 12, color: c.textMid, marginBottom: 2 }}>{ASSET_LABELS[asset]}</div>
                       <div style={{ fontSize: 26, fontWeight: 700, color: col }}>{sc}</div>
-                      <div style={{ height: 3, background: "#eef0f4", borderRadius: 2, overflow: "hidden", marginTop: 4 }}>
+                      <div style={{ height: 3, background: c.track, borderRadius: 2, overflow: "hidden", marginTop: 4 }}>
                         <div style={{ height: "100%", width: sc + "%", background: col, transition: "width .6s" }} />
                       </div>
                     </div>
@@ -716,16 +775,16 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
               </div>
 
               {/* AI Analysis */}
-              <div style={{ ...S.card, border: "1px solid #1a2a1a" }}>
+              <div style={{ ...S.card }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
                   <span style={S.label}>AI Macro Analyst · Live Headlines</span>
-                  <button onClick={callAI} style={{ fontSize: 12, padding: "3px 10px", background: isPro ? "#eafaf2" : "#f3f4f6", border: `1px solid ${isPro ? "#2a9d5c" : "#d1d5db"}`, borderRadius: 5, color: isPro ? "#2a9d5c" : "#9ca3af", cursor: "pointer" }}>
+                  <button onClick={callAI} style={{ fontSize: 12, padding: "3px 10px", background: isPro ? c.tintG : c.inset, border: `1px solid ${isPro ? c.green : c.border}`, borderRadius: 5, color: isPro ? c.green : c.textMuted, cursor: "pointer" }}>
                     {aiLoading ? "Analyzing..." : !user ? "🔒 Log in to analyze" : !isPro ? "🔒 Pro feature" : "Analyze now ↗"}
                   </button>
                 </div>
                 {aiText
-                  ? <div style={{ fontSize: 17, color: "#2a2a3e", lineHeight: 1.7 }}>{aiText}</div>
-                  : <div style={{ fontSize: 17, color: "#8a8caa", fontStyle: "italic" }}>
+                  ? <div style={{ fontSize: 17, color: c.text, lineHeight: 1.7 }}>{aiText}</div>
+                  : <div style={{ fontSize: 17, color: c.textFaint, fontStyle: "italic" }}>
                       {!user
                         ? <>🔒 <strong>Log in</strong> and subscribe to get a live AI macro brief on today's headlines.</>
                         : !isPro
@@ -741,25 +800,25 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
           {tab === "yield" && (
             <>
               <div style={S.label}>Real Yield · All Countries</div>
-              <div style={{ ...S.card, fontSize: 17, color: "#555577", lineHeight: 1.7, marginBottom: 12 }}>
-                <strong style={{ color: "#1a1a2e" }}>Real Yield = Nominal Rate − CPI Inflation.</strong> Negative = money leaves bonds for gold/equities. High positive = bonds attract capital.
+              <div style={{ ...S.card, fontSize: 17, color: c.textMid, lineHeight: 1.7, marginBottom: 12 }}>
+                <strong style={{ color: c.text }}>Real Yield = Nominal Rate − CPI Inflation.</strong> Negative = money leaves bonds for gold/equities. High positive = bonds attract capital.
               </div>
-              {Object.entries(MACRO).map(([c, mv]) => {
-                const ry = mv.real_yield; const neg = ry < 0; const w = Math.min(Math.abs(ry) / 6 * 100, 85);
+              {Object.entries(MACRO).map(([co, m]) => {
+                const ry = m.real_yield; const neg = ry < 0; const w = Math.min(Math.abs(ry) / 6 * 100, 85);
                 return (
-                  <div key={c} style={{ ...S.card }}>
+                  <div key={co} style={{ ...S.card }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ fontSize: 12 }}>{FLAGS[c]} {c}</span>
-                      <div style={{ display: "flex", gap: 10, fontSize: 17, color: "#7a7c99" }}>
-                        <span>Rate: <strong style={{ color: "#1a1a2e" }}>{mv.rate}%</strong></span>
-                        <span>CPI: <strong style={{ color: "#1a1a2e" }}>{mv.inflation}%</strong></span>
-                        <strong style={{ color: neg ? "#d64040" : ry > 2 ? "#2a9d5c" : "#e9a825" }}>Real: {ry > 0 ? "+" : ""}{ry.toFixed(2)}%</strong>
+                      <span style={{ fontSize: 12 }}>{FLAGS[co]} {co}</span>
+                      <div style={{ display: "flex", gap: 10, fontSize: 17, color: c.textSoft }}>
+                        <span>Rate: <strong style={{ color: c.text }}>{m.rate}%</strong></span>
+                        <span>CPI: <strong style={{ color: c.text }}>{m.inflation}%</strong></span>
+                        <strong style={{ color: neg ? c.red : ry > 2 ? c.green : c.amber }}>Real: {ry > 0 ? "+" : ""}{ry.toFixed(2)}%</strong>
                       </div>
                     </div>
-                    <div style={{ height: 6, background: "#eef0f4", borderRadius: 3, overflow: "hidden", marginBottom: 5 }}>
-                      <div style={{ float: neg ? "right" : "left", width: w + "%", height: "100%", background: neg ? "#d64040" : ry > 2 ? "#2a9d5c" : "#e9a825", borderRadius: 3 }} />
+                    <div style={{ height: 6, background: c.track, borderRadius: 3, overflow: "hidden", marginBottom: 5 }}>
+                      <div style={{ float: neg ? "right" : "left", width: w + "%", height: "100%", background: neg ? c.red : ry > 2 ? c.green : c.amber, borderRadius: 3 }} />
                     </div>
-                    <div style={{ fontSize: 12, color: "#2a3a50" }}>
+                    <div style={{ fontSize: 12, color: c.textMid }}>
                       {neg ? "↳ Negative → carry trade origin. Capital flees to gold/equities." : ry > 2 ? "↳ High → bonds attractive, currency strong." : "↳ Mild positive — balanced."}
                     </div>
                   </div>
@@ -771,14 +830,14 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
           {tab === "alerts" && (
             <>
               <div style={S.label}>Threshold Alerts · Scenario Impact</div>
-              <div style={{ ...S.card, fontSize: 17, color: "#555577", marginBottom: 12 }}>
-                Live: <strong style={{ color: "#1a1a2e" }}>BoJ 0.1%</strong> · <strong style={{ color: "#1a1a2e" }}>US10Y 4.42%</strong> · <strong style={{ color: "#1a1a2e" }}>VIX 18.4</strong> · <strong style={{ color: "#1a1a2e" }}>Gold $2,340</strong>
+              <div style={{ ...S.card, fontSize: 17, color: c.textMid, marginBottom: 12 }}>
+                Live: <strong style={{ color: c.text }}>BoJ 0.1%</strong> · <strong style={{ color: c.text }}>US10Y 4.42%</strong> · <strong style={{ color: c.text }}>VIX 18.4</strong> · <strong style={{ color: c.text }}>Gold $2,340</strong>
               </div>
               {alerts.map(a => (
                 <div key={a.id} style={{ ...S.card, opacity: a.active ? 1 : 0.5 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <span style={{ fontSize: 17, color: "#1a1a2e", fontWeight: 600 }}>{a.label}</span>
-                    <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: 12, color: "#7a7c99" }}>
+                    <span style={{ fontSize: 17, color: c.text, fontWeight: 600 }}>{a.label}</span>
+                    <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: 12, color: c.textSoft }}>
                       <input type="checkbox" checked={a.active} onChange={e => setAlerts(p => p.map(x => x.id === a.id ? { ...x, active: e.target.checked } : x))} />
                       {a.active ? "On" : "Off"}
                     </label>
@@ -790,7 +849,7 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
                       ? [["Equities", -5], ["Bonds", -8], ["Gold", +5], ["Dollar", +4]]
                       : [["Equities", -6], ["Bonds", +3], ["Gold", +7], ["Cash", +4]]
                     ).map(([asset, delta]) => (
-                      <span key={asset} style={{ fontSize: 17, padding: "2px 8px", borderRadius: 4, background: delta > 0 ? "#091408" : "#160606", color: delta > 0 ? "#2a9d5c" : "#d64040" }}>
+                      <span key={asset} style={{ fontSize: 17, padding: "2px 8px", borderRadius: 4, background: delta > 0 ? c.tintG : c.tintR, color: delta > 0 ? c.green : c.red }}>
                         {asset} {delta > 0 ? "+" : ""}{delta}%
                       </span>
                     ))}
@@ -804,23 +863,23 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
             <>
               <div style={S.label}>Global Capital Flow Map</div>
               {[
-                { from: "🇯🇵 Japan", to: "🇺🇸 USA", size: "$2.8T", col: "#2a9d5c", reason: "Carry trade — borrow JPY 0.1%, buy UST 4.4%", strength: 92 },
-                { from: "🇸🇦 Gulf", to: "🇺🇸 USA", size: "~$600B", col: "#2a9d5c", reason: "Petrodollar recycling into US equities and T-bills", strength: 75 },
-                { from: "🇪🇺 Europe", to: "🇺🇸 USA", size: "~$400B", col: "#e9a825", reason: "ECB cutting — EUR capital seeking higher US returns", strength: 58 },
-                { from: "🇮🇳 India", to: "🇺🇸 USA", size: "$4.2B", col: "#d64040", reason: "FPI outflow — USD yield differential too wide", strength: 42 },
-                { from: "🇨🇳 China", to: "🥇 Gold", size: "Divesting", col: "#e9a825", reason: "PBOC buying gold, reducing US Treasury exposure", strength: 55 },
+                { from: "🇯🇵 Japan", to: "🇺🇸 USA", size: "$2.8T", col: c.green, reason: "Carry trade — borrow JPY 0.1%, buy UST 4.4%", strength: 92 },
+                { from: "🇸🇦 Gulf", to: "🇺🇸 USA", size: "~$600B", col: c.green, reason: "Petrodollar recycling into US equities and T-bills", strength: 75 },
+                { from: "🇪🇺 Europe", to: "🇺🇸 USA", size: "~$400B", col: c.amber, reason: "ECB cutting — EUR capital seeking higher US returns", strength: 58 },
+                { from: "🇮🇳 India", to: "🇺🇸 USA", size: "$4.2B", col: c.red, reason: "FPI outflow — USD yield differential too wide", strength: 42 },
+                { from: "🇨🇳 China", to: "🥇 Gold", size: "Divesting", col: c.amber, reason: "PBOC buying gold, reducing US Treasury exposure", strength: 55 },
               ].map((f, i) => (
                 <div key={i} style={{ ...S.card }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-                    <span style={{ fontSize: 12, color: "#444466", minWidth: 80 }}>{f.from}</span>
-                    <div style={{ flex: 1, height: 2, background: "#eef0f4", borderRadius: 1, position: "relative" }}>
+                    <span style={{ fontSize: 12, color: c.textMid, minWidth: 80 }}>{f.from}</span>
+                    <div style={{ flex: 1, height: 2, background: c.track, borderRadius: 1, position: "relative" }}>
                       <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: f.strength + "%", background: f.col, transition: "width .5s" }} />
                       <span style={{ position: "absolute", right: -8, top: -7, fontSize: 12, color: f.col }}>→</span>
                     </div>
-                    <span style={{ fontSize: 12, color: "#111122", fontWeight: 600, minWidth: 55 }}>{f.to}</span>
+                    <span style={{ fontSize: 12, color: c.textStrong, fontWeight: 600, minWidth: 55 }}>{f.to}</span>
                     <span style={{ fontSize: 12, color: f.col, fontWeight: 700, minWidth: 50, textAlign: "right" }}>{f.size}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: "#7a7c99" }}>{f.reason}</div>
+                  <div style={{ fontSize: 12, color: c.textSoft }}>{f.reason}</div>
                 </div>
               ))}
             </>
@@ -830,66 +889,66 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
         {/* RIGHT — VERDICT */}
         <div style={S.right}>
           <div style={S.label}>Live Verdict</div>
-          <div style={{ background: "#eafaf2", border: "1px solid #2a9d5c", borderRadius: 8, padding: 12, marginBottom: 8, textAlign: "center" }}>
-            <div style={{ fontSize: 11, color: "#2a9d5c", marginBottom: 3 }}>MONEY FLOWING TO</div>
+          <div style={{ background: c.tintG, border: `1px solid ${c.green}`, borderRadius: 8, padding: 12, marginBottom: 8, textAlign: "center" }}>
+            <div style={{ fontSize: 11, color: c.green, marginBottom: 3 }}>MONEY FLOWING TO</div>
             <div style={{ fontSize: 26, marginBottom: 2 }}>{ASSET_ICONS[topAsset[0]]}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#2a9d5c" }}>{ASSET_LABELS[topAsset[0]]}</div>
-            <div style={{ fontSize: 12, color: "#7a7c99", marginTop: 3 }}>Score: {Math.round(topAsset[1])}/100</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: c.green }}>{ASSET_LABELS[topAsset[0]]}</div>
+            <div style={{ fontSize: 12, color: c.textSoft, marginTop: 3 }}>Score: {Math.round(topAsset[1])}/100</div>
           </div>
-          <div style={{ background: "#fdecea", border: "1px solid #d64040", borderRadius: 8, padding: 12, marginBottom: 12, textAlign: "center" }}>
-            <div style={{ fontSize: 11, color: "#d64040", marginBottom: 3 }}>CAPITAL LEAVING</div>
+          <div style={{ background: c.tintR, border: `1px solid ${c.red}`, borderRadius: 8, padding: 12, marginBottom: 12, textAlign: "center" }}>
+            <div style={{ fontSize: 11, color: c.red, marginBottom: 3 }}>CAPITAL LEAVING</div>
             <div style={{ fontSize: 26, marginBottom: 2 }}>{ASSET_ICONS[bottomAsset[0]]}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#d64040" }}>{ASSET_LABELS[bottomAsset[0]]}</div>
-            <div style={{ fontSize: 12, color: "#7a7c99", marginTop: 3 }}>Score: {Math.round(bottomAsset[1])}/100</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: c.red }}>{ASSET_LABELS[bottomAsset[0]]}</div>
+            <div style={{ fontSize: 12, color: c.textSoft, marginTop: 3 }}>Score: {Math.round(bottomAsset[1])}/100</div>
           </div>
 
           <div style={S.label}>By Country</div>
           {[
-            { c: "🇺🇸", n: "USA", flow: "Receiving", col: "#2a9d5c", detail: "Equities + T-bills" },
-            { c: "🇯🇵", n: "Japan", flow: "Sending", col: "#e9a825", detail: "Carry → USD" },
-            { c: "🇮🇳", n: "India", flow: "Outflow", col: "#d64040", detail: "FPI leaving" },
-            { c: "🇨🇳", n: "China", flow: "Diverging", col: "#e9a825", detail: "UST → Gold" },
-            { c: "🇰🇷", n: "Korea", flow: "Neutral", col: "#3a4050", detail: "Export risk" },
+            { c: "🇺🇸", n: "USA", flow: "Receiving", col: c.green, detail: "Equities + T-bills" },
+            { c: "🇯🇵", n: "Japan", flow: "Sending", col: c.amber, detail: "Carry → USD" },
+            { c: "🇮🇳", n: "India", flow: "Outflow", col: c.red, detail: "FPI leaving" },
+            { c: "🇨🇳", n: "China", flow: "Diverging", col: c.amber, detail: "UST → Gold" },
+            { c: "🇰🇷", n: "Korea", flow: "Neutral", col: c.textMuted, detail: "Export risk" },
           ].map(f => (
-            <div key={f.c} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #121518" }}>
-              <div style={{ fontSize: 11 }}><span style={{ marginRight: 5 }}>{f.c}</span><span style={{ color: "#444466" }}>{f.n}</span></div>
+            <div key={f.c} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${c.borderSoft}` }}>
+              <div style={{ fontSize: 11 }}><span style={{ marginRight: 5 }}>{f.c}</span><span style={{ color: c.textMid }}>{f.n}</span></div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: f.col }}>{f.flow}</div>
-                <div style={{ fontSize: 11, color: "#8a8caa" }}>{f.detail}</div>
+                <div style={{ fontSize: 11, color: c.textFaint }}>{f.detail}</div>
               </div>
             </div>
           ))}
 
           <div style={{ marginTop: 12 }}><div style={S.label}>Risk Radar</div></div>
           {[
-            ["BoJ hike", "HIGH", "#d64040", "Carry unwind"],
-            ["US inflation", "MED", "#e9a825", "Fed hawkish"],
-            ["Rupee", "MED", "#e9a825", "INR at 83.6"],
-            ["China PMI", "MED", "#e9a825", "EM drag"],
-            ["Dollar", "LOW", "#2a9d5c", "DXY softening"],
+            ["BoJ hike", "HIGH", c.red, "Carry unwind"],
+            ["US inflation", "MED", c.amber, "Fed hawkish"],
+            ["Rupee", "MED", c.amber, "INR at 83.6"],
+            ["China PMI", "MED", c.amber, "EM drag"],
+            ["Dollar", "LOW", c.green, "DXY softening"],
           ].map(([r, lv, col, sub]) => (
             <div key={r} style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
               <div>
-                <div style={{ fontSize: 12, color: "#444466" }}>{r}</div>
-                <div style={{ fontSize: 11, color: "#8a8caa" }}>{sub}</div>
+                <div style={{ fontSize: 12, color: c.textMid }}>{r}</div>
+                <div style={{ fontSize: 11, color: c.textFaint }}>{sub}</div>
               </div>
-              <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, background: col + "18", color: col, fontWeight: 700 }}>{lv}</span>
+              <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 3, background: col + "22", color: col, fontWeight: 700 }}>{lv}</span>
             </div>
           ))}
 
           {/* Playbook shortcut in sidebar */}
           {playbookResult && !playbookResult.error && (
-            <div style={{ marginTop: 12, padding: 8, background: "#ffffff", border: "1px solid #1c2028", borderRadius: 6 }}>
+            <div style={{ marginTop: 12, padding: 8, background: c.surface, border: `1px solid ${c.border}`, borderRadius: 6 }}>
               <div style={S.label}>Last Playbook · {playbookEvent?.label}</div>
-              <div style={{ fontSize: 12, color: "#1a1a2e", marginBottom: 4 }}>{playbookResult.headline}</div>
-              <button onClick={() => setTab("playbook")} style={{ fontSize: 11, padding: "2px 8px", background: "#eafaf2", border: "1px solid #2a9d5c", borderRadius: 4, color: "#2a9d5c", cursor: "pointer" }}>
+              <div style={{ fontSize: 12, color: c.text, marginBottom: 4 }}>{playbookResult.headline}</div>
+              <button onClick={() => setTab("playbook")} style={{ fontSize: 11, padding: "2px 8px", background: c.tintG, border: `1px solid ${c.green}`, borderRadius: 4, color: c.green, cursor: "pointer" }}>
                 View full analysis ↗
               </button>
             </div>
           )}
 
-          <div style={{ marginTop: 10, padding: 8, background: "#ffffff", borderRadius: 6, fontSize: 12, color: "#8a8caa", lineHeight: 1.6 }}>
-            <strong style={{ color: "#1a1a2e" }}>Watch: </strong>
+          <div style={{ marginTop: 10, padding: 8, background: c.surface, borderRadius: 6, fontSize: 12, color: c.textFaint, lineHeight: 1.6 }}>
+            <strong style={{ color: c.text }}>Watch: </strong>
             BoJ Jul 31. Signal above 0.25% = carry unwind. RBI Aug = rate cut signal for India.
           </div>
         </div>
@@ -902,7 +961,7 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
       {/* Checkout success toast */}
       {checkoutSuccess && (
         <div style={{
-          position: "fixed", bottom: 24, right: 24, background: "#2a9d5c", color: "#fff",
+          position: "fixed", bottom: 24, right: 24, background: c.green, color: "#fff",
           padding: "12px 20px", borderRadius: 10, fontSize: 14, fontWeight: 600,
           boxShadow: "0 4px 16px rgba(0,0,0,0.18)", zIndex: 300, display: "flex", gap: 10, alignItems: "center",
         }}>

@@ -1,7 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 
-export default function UserMenu({ onLoginClick }) {
+const LIGHT_THEME = {
+  surface: "#ffffff", border: "#e5e7eb", borderSoft: "#f3f4f6",
+  text: "#374151", textStrong: "#111122", textMuted: "#9ca3af",
+  green: "#2a9d5c", red: "#dc2626",
+};
+
+export default function UserMenu({ onLoginClick, theme }) {
+  const t = theme || LIGHT_THEME;
   const { user, isPro, signOut, openPortal } = useAuth();
   const [open, setOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -19,7 +26,7 @@ export default function UserMenu({ onLoginClick }) {
         onClick={onLoginClick}
         style={{
           padding: "5px 16px", fontSize: 13, fontWeight: 600,
-          background: "#2a9d5c", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer",
+          background: t.green, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer",
         }}
       >
         Log in
@@ -36,25 +43,25 @@ export default function UserMenu({ onLoginClick }) {
     wrap: { position: "relative" },
     trigger: {
       display: "flex", alignItems: "center", gap: 7, cursor: "pointer",
-      background: "none", border: "1px solid #e5e7eb", borderRadius: 7,
-      padding: "5px 12px", fontSize: 13, color: "#374151",
+      background: "none", border: `1px solid ${t.border}`, borderRadius: 7,
+      padding: "5px 12px", fontSize: 13, color: t.text,
     },
     avatar: {
-      width: 26, height: 26, borderRadius: "50%", background: "#2a9d5c",
+      width: 26, height: 26, borderRadius: "50%", background: t.green,
       display: "flex", alignItems: "center", justifyContent: "center",
       color: "#fff", fontWeight: 700, fontSize: 12,
     },
     dropdown: {
       position: "absolute", right: 0, top: "calc(100% + 6px)",
-      background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8,
-      boxShadow: "0 4px 16px rgba(0,0,0,0.10)", width: 220, zIndex: 100,
+      background: t.surface, border: `1px solid ${t.border}`, borderRadius: 8,
+      boxShadow: "0 4px 16px rgba(0,0,0,0.18)", width: 220, zIndex: 100,
       overflow: "hidden",
     },
-    head: { padding: "12px 14px", borderBottom: "1px solid #f3f4f6" },
+    head: { padding: "12px 14px", borderBottom: `1px solid ${t.borderSoft}` },
     item: {
       display: "block", width: "100%", textAlign: "left", padding: "10px 14px",
-      fontSize: 13, color: "#374151", background: "none", border: "none",
-      cursor: "pointer", borderBottom: "1px solid #f9fafb",
+      fontSize: 13, color: t.text, background: "none", border: "none",
+      cursor: "pointer", borderBottom: `1px solid ${t.borderSoft}`,
     },
   };
 
@@ -65,17 +72,17 @@ export default function UserMenu({ onLoginClick }) {
       <button style={S.trigger} onClick={() => setOpen(o => !o)}>
         <div style={S.avatar}>{initial}</div>
         <span>{user.email?.split("@")[0]}</span>
-        <span style={{ fontSize: 11, color: isPro ? "#2a9d5c" : "#9ca3af", fontWeight: 700 }}>
+        <span style={{ fontSize: 11, color: isPro ? t.green : t.textMuted, fontWeight: 700 }}>
           {isPro ? "PRO" : "FREE"}
         </span>
-        <span style={{ fontSize: 10, color: "#9ca3af" }}>▾</span>
+        <span style={{ fontSize: 10, color: t.textMuted }}>▾</span>
       </button>
 
       {open && (
         <div style={S.dropdown}>
           <div style={S.head}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#111122" }}>{user.email}</div>
-            <div style={{ fontSize: 11, color: isPro ? "#2a9d5c" : "#9ca3af", marginTop: 2 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: t.textStrong }}>{user.email}</div>
+            <div style={{ fontSize: 11, color: isPro ? t.green : t.textMuted, marginTop: 2 }}>
               {isPro ? "✓ MacroRadar Pro — active" : "Free plan"}
             </div>
           </div>
@@ -84,7 +91,7 @@ export default function UserMenu({ onLoginClick }) {
               {portalLoading ? "Loading..." : "Manage subscription ↗"}
             </button>
           )}
-          <button style={{ ...S.item, color: "#dc2626", borderBottom: "none" }}
+          <button style={{ ...S.item, color: t.red, borderBottom: "none" }}
             onClick={() => { setOpen(false); signOut(); }}>
             Sign out
           </button>
