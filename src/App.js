@@ -1,4 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+import { supabase } from "./supabaseClient";
+import { useAuth } from "./AuthContext";
+import LoginPage from "./LoginPage";
+import SubscribeModal from "./SubscribeModal";
+import UserMenu from "./UserMenu";
 
 const AV_KEY = "ZL792L85HOT616V9";
 
@@ -184,6 +189,14 @@ export default function App() {
   const [playbookLoading, setPlaybookLoading] = useState(false);
   const [playbookHistory, setPlaybookHistory] = useState([]);
 
+  const { user, isPro } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
+  const [showSubscribe, setShowSubscribe] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("checkout") === "success";
+  });
+
   const fetchRSS = useCallback(async () => {
     setNewsStatus("Fetching live news...");
     const allItems = [];
@@ -267,27 +280,29 @@ export default function App() {
   }, [news, userWeights]);
 
   const callAI = useCallback(async () => {
+    if (!user) { setShowLogin(true); return; }
+    if (!isPro) { setShowSubscribe(true); return; }
     setAiLoading(true);
     setAiText("");
     const headlines = news.slice(0, 6).map(n => `${n.flag} [${n.source}] ${n.title}`).join("\n");
     const sc = Object.entries(scores).map(([k, v]) => `${k}:${Math.round(v)}`).join(", ");
     const prompt = `You are a global macro strategist. Based on these LIVE headlines:\n${headlines}\n\nAsset scores (0-100): ${sc}\n\nIn 4 sentences: (1) Where is money flowing and why? (2) Biggest risk next 30 days? (3) What should an Indian investor watch? (4) One contrarian view? Be specific.`;
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] }),
+      const { data, error } = await supabase.functions.invoke("anthropic-proxy", {
+        body: { model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] },
       });
-      const data = await res.json();
+      if (error) throw error;
       setAiText(data.content?.filter(b => b.type === "text").map(b => b.text).join("") || "Analysis unavailable.");
     } catch (e) {
       setAiText("Error fetching analysis. Please try again.");
     }
     setAiLoading(false);
-  }, [news, scores]);
+  }, [news, scores, user, isPro]);
 
   // ─── MACRO PLAYBOOK CALL ─────────────────────────────────────────────────
   const runPlaybook = useCallback(async (event) => {
+    if (!user) { setShowLogin(true); return; }
+    if (!isPro) { setShowSubscribe(true); return; }
     setPlaybookEvent(event);
     setPlaybookResult(null);
     setPlaybookLoading(true);
@@ -328,16 +343,10 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
 }`;
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: prompt }]
-        }),
+      const { data, error } = await supabase.functions.invoke("anthropic-proxy", {
+        body: { model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] },
       });
-      const data = await res.json();
+      if (error) throw error;
       const rawText = data.content?.filter(b => b.type === "text").map(b => b.text).join("") || "{}";
       const clean = rawText.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
@@ -347,7 +356,7 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
       setPlaybookResult({ error: "Analysis failed. Try again." });
     }
     setPlaybookLoading(false);
-  }, [scores]);
+  }, [scores, user, isPro]);
 
   const mv = MACRO[country];
   const topAsset    = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
@@ -392,7 +401,7 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
           <span style={{ fontWeight: 700, fontSize: 17, color: "#111122", letterSpacing: ".04em" }}>MACRORADAR.IN</span>
           <span style={{ fontSize: 12, color: "#7a7c99" }}>Global Capital Flow Intelligence · Live</span>
         </div>
-        <span style={{ fontSize: 12, color: "#7a7c99" }}>June 06, 2026</span>
+        <UserMenu onLoginClick={() => setShowLogin(true)} />
       </div>
 
       {/* TICKER */}
@@ -498,6 +507,21 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
                   </div>
                 </div>
               </div>
+
+              {/* Pro gate banner */}
+              {!isPro && (
+                <div style={{ ...S.card, border: "1px solid #e9a825", background: "#fffbeb", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ fontSize: 13, color: "#92400e" }}>
+                    🔒 <strong>Pro feature.</strong> Subscribe to fire events and get AI analysis.
+                  </div>
+                  <button
+                    onClick={() => user ? setShowSubscribe(true) : setShowLogin(true)}
+                    style={{ padding: "5px 14px", background: "#2a9d5c", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    {user ? "Upgrade — $100/mo" : "Log in to subscribe"}
+                  </button>
+                </div>
+              )}
 
               {/* Event Grid */}
               <div style={S.label}>Select a macro event to fire</div>
@@ -695,13 +719,20 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
               <div style={{ ...S.card, border: "1px solid #1a2a1a" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
                   <span style={S.label}>AI Macro Analyst · Live Headlines</span>
-                  <button onClick={callAI} style={{ fontSize: 12, padding: "3px 10px", background: "#eafaf2", border: "1px solid #2a9d5c", borderRadius: 5, color: "#2a9d5c", cursor: "pointer" }}>
-                    {aiLoading ? "Analyzing..." : "Analyze now ↗"}
+                  <button onClick={callAI} style={{ fontSize: 12, padding: "3px 10px", background: isPro ? "#eafaf2" : "#f3f4f6", border: `1px solid ${isPro ? "#2a9d5c" : "#d1d5db"}`, borderRadius: 5, color: isPro ? "#2a9d5c" : "#9ca3af", cursor: "pointer" }}>
+                    {aiLoading ? "Analyzing..." : !user ? "🔒 Log in to analyze" : !isPro ? "🔒 Pro feature" : "Analyze now ↗"}
                   </button>
                 </div>
                 {aiText
                   ? <div style={{ fontSize: 17, color: "#2a2a3e", lineHeight: 1.7 }}>{aiText}</div>
-                  : <div style={{ fontSize: 17, color: "#8a8caa", fontStyle: "italic" }}>Click "Analyze now" — Claude reads today's actual headlines and gives you a macro brief.</div>
+                  : <div style={{ fontSize: 17, color: "#8a8caa", fontStyle: "italic" }}>
+                      {!user
+                        ? <>🔒 <strong>Log in</strong> and subscribe to get a live AI macro brief on today's headlines.</>
+                        : !isPro
+                        ? <>🔒 <strong>Pro feature</strong> — subscribe at $100/month to unlock AI analysis.</>
+                        : <>Click "Analyze now" — Claude reads today's actual headlines and gives you a macro brief.</>
+                      }
+                    </div>
                 }
               </div>
             </>
@@ -863,6 +894,23 @@ Respond ONLY in this exact JSON format (no markdown, no extra text):
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {showLogin && <LoginPage onClose={() => setShowLogin(false)} />}
+      {showSubscribe && <SubscribeModal onClose={() => setShowSubscribe(false)} />}
+
+      {/* Checkout success toast */}
+      {checkoutSuccess && (
+        <div style={{
+          position: "fixed", bottom: 24, right: 24, background: "#2a9d5c", color: "#fff",
+          padding: "12px 20px", borderRadius: 10, fontSize: 14, fontWeight: 600,
+          boxShadow: "0 4px 16px rgba(0,0,0,0.18)", zIndex: 300, display: "flex", gap: 10, alignItems: "center",
+        }}>
+          <span>✓</span>
+          <span>Subscription activating… AI features will unlock in a moment.</span>
+          <button onClick={() => setCheckoutSuccess(false)} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 16, marginLeft: 4 }}>×</button>
+        </div>
+      )}
     </div>
   );
 }
